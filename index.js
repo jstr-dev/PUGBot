@@ -1,8 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits, MessageFlags } = require('discord.js');
-const axiosInstance = require('./api');
-
+const queue = require('./queue');
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.commands = new Collection();
@@ -29,17 +28,7 @@ for (const folder of commandFolders) {
 client.once(Events.ClientReady, readyClient => {
 	console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 
-    axiosInstance
-        .get('internal/queues')
-        .then(response => {
-            console.log(response.data);
-            for (const queue of response.data) {
-                initQueue(queue);
-            }
-        })
-        .catch(error => {
-            console.error(error);
-        });
+	queue.init();
 });
 
 client.on(Events.InteractionCreate, async interaction => {

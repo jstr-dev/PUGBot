@@ -1,7 +1,7 @@
 const axios = require('axios');
 require('dotenv').config();
 
-const axiosInstance = axios.create({
+const api = axios.create({
     baseURL: process.env.API_URL + '/api',
     timeout: 5000,
     headers: {
@@ -11,4 +11,4 @@ const axiosInstance = axios.create({
     },
 });
 
-module.exports = axiosInstance;
+module.exports = api;
