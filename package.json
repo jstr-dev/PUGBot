@@ -1,0 +1,16 @@
+{
+  "name": "pug",
+  "version": "0.0.1",
+  "description": "pug bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "start"
+  },
+  "author": "justa",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "discord.js": "^14.17.3",
+    "dotenv": "^16.4.7"
+  }
+}
