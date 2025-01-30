@@ -1,5 +1,6 @@
 const { EmbedBuilder, MessageFlags } = require('discord.js');
 
+// TODO: test whether this is actually private.
 async function generateErrorEmbed(interaction, message) {
     const errorEmbed = new EmbedBuilder()
         .setTitle('Error')

@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits, MessageFlags } = require('discord.js');
 const queue = require('./queue');
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
 client.commands = new Collection();
 const foldersPath = path.join(__dirname, 'commands');
@@ -28,7 +28,7 @@ for (const folder of commandFolders) {
 client.once(Events.ClientReady, readyClient => {
 	console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 
-	queue.init();
+	queue.init(readyClient);
 });
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -50,6 +50,24 @@ client.on(Events.InteractionCreate, async interaction => {
 			await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
 		}
 	}
+});
+
+client.on(Events.InteractionCreate, async interaction => {
+	if (!interaction.isButton()) return;
+
+	let arguments = interaction.customId.split('-');
+	let buttonId = arguments[0];
+	arguments = arguments.slice(1, arguments.length);
+
+	switch (buttonId) {
+		case 'queue':
+			await queue.processButton(interaction, arguments);
+			break;
+	}
+
+	try {
+		await interaction.deferUpdate();
+	} catch (e) { }
 });
 
 client.login(token);
