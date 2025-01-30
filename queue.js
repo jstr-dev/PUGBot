@@ -53,16 +53,19 @@ module.exports = {
     },
 
     generateMessage: async function (queue) {
-        const embed = new EmbedBuilder()
-            .setTitle(queue.name + ' Queue (2/8)')
+        let embed = new EmbedBuilder()
+            .setTitle(queue.name + ' Queue (' + queue.players.length + '/8)')
             .setColor(0x0099FF)
             .setDescription(queue.description)
             .setFields(
                 { name: '\u2009', value: '\u2009' },
                 { name: 'Current Players', value: await this.generatePlayerListMessage(queue.players) },
                 { name: '\u2009', value: '\u2009' },
-            )
-            .setFooter({ text: 'Last update: ' + (this.lastUpdate[queue.id] ?? 'N/A') });
+        );
+
+        if (this.lastUpdate[queue.id]) {
+            embed = embed.setFooter({ text: this.lastUpdate[queue.id] }).setTimestamp();
+        }
 
         const join = new ButtonBuilder()
             .setCustomId('queue-join-' + queue.id)
@@ -99,7 +102,7 @@ module.exports = {
                 discord_id: interaction.user.id,
             });
 
-            this.lastUpdate[queueId] = interaction.member.nickname + ' ' + (isJoin ? 'joined' : 'left') + ' the queue.';
+            this.lastUpdate[queueId] = interaction.member.nickname + ' ' + (isJoin ? 'joined' : 'left') + ' the queue';
             this.queues[queueId] = response.data;
             this.updateMessage(this.queues[queueId]);
         } catch (response) {
