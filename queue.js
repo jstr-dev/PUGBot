@@ -16,13 +16,16 @@ module.exports = {
         'PLAYER_ALREADY_IN_QUEUE': 'You are already in the queue.',
         'PLAYER_ALREADY_IN_ANOTHER_QUEUE': 'You are already in another queue.',
         'PLAYER_NOT_IN_QUEUE': 'You are not in the queue.',
+        'QUEUE_IN_PROGRESS': 'You can\'t leave the queue once the picking process has begun.',
     },
 
     generatePlayerListMessage: async function (players) {
         for (let player of players) {
-            let member = await this.guild.members.fetch(player.discord_id);
-            if (member) {
+            try {
+                let member = await this.guild.members.fetch(player.discord_id);
                 player.name = member.nickname;
+            } catch (error) {
+
             }
         }
 

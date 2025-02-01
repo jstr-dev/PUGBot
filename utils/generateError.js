@@ -9,7 +9,7 @@ async function generateErrorEmbed(interaction, message) {
 
     await interaction.reply({
         embeds: [errorEmbed],
-        flag: MessageFlags.Ephemeral
+        ephemeral: true
     });
 }
 
