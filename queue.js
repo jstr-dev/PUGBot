@@ -169,7 +169,7 @@ module.exports = {
 
     generateFinishedMessage: async function (queue) {
         let embed = new EmbedBuilder()
-            .setTitle(queue.name + ' Queue (Finished)⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀')
+            .setTitle(queue.name + ' Queue (Ready)⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀')
             .setColor(0x0099FF)
             .setDescription('It\'s time to play!')
             .addFields(
