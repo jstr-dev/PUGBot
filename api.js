@@ -11,4 +11,16 @@ const api = axios.create({
     },
 });
 
+api.interceptors.response.use(
+    response => response,  // pass through successful responses
+    error => {
+        if (error.response && error.response.status === 503) {
+            console.log('Service Unavailable (503)');
+            // Handle the 503 error, e.g., show a message, retry request, etc.
+        }
+
+        return error;
+    }
+);
+
 module.exports = api;

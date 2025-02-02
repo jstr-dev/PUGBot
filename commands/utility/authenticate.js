@@ -20,7 +20,7 @@ module.exports = {
         }
 
         const linkButton = new ButtonBuilder()
-            .setURL(`${process.env.API_URL}/steam/auth?discord_id=${userId}&timestamp=${timestamp}&signature=${sign}`)
+            .setURL(`${process.env.NGROK_URL}/steam/auth?discord_id=${userId}&timestamp=${timestamp}&signature=${sign}`)
             .setLabel('Authenticate with Steam')
             .setStyle(ButtonStyle.Link);
 

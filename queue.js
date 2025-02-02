@@ -305,7 +305,7 @@ module.exports = {
                 discord_id: interaction.user.id,
             });
 
-            this.lastUpdate[queueId] = interaction.member.nickname + ' ' + (isJoin ? 'joined' : 'left') + ' the queue';
+            this.lastUpdate[queueId] = (interaction.member.nickname ?? interaction.user.username) + ' ' + (isJoin ? 'joined' : 'left') + ' the queue';
             this.queues[queueId] = response.data;
             await this.update(this.queues[queueId]);
         } catch (response) {
