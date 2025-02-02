@@ -52,7 +52,7 @@ module.exports = {
             });
 
             let ban = res.data.ban;
-            let queue = res.data.queue;
+            let updatedQueue = res.data.queue;
 
             await user.send({ content: 'You have been banned from playing in the PUG queue.\nReason: ' + ban.reason + '\nExpires at: ' + ban.expires_at, ephemeral: true });
 
@@ -68,10 +68,10 @@ module.exports = {
 
             await interaction.reply({ embeds: [banEmbed] });
 
-            if (queue) {
-                queue.lastUpdate[queue.id] = user.displayName + ' has been banned';
-                queue.queues[queue.id] = queue;
-                await queue.update(queue.id);
+            if (updatedQueue) {
+                queue.lastUpdate[updatedQueue.id] = user.displayName + ' has been banned';
+                queue.queues[updatedQueue.id] = updatedQueue;
+                await queue.update(updatedQueue);
             }
         } catch (error) {
             console.log(error);
