@@ -1,8 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, Events, GatewayIntentBits, MessageFlags } = require('discord.js');
+const { Client, Collection, Events, GatewayIntentBits, MessageFlags, Options } = require('discord.js');
 const queue = require('./queue');
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers], makeCache: Options.cacheWithLimits(Options.DefaultMakeCacheSettings) });
 
 client.commands = new Collection();
 const foldersPath = path.join(__dirname, 'commands');

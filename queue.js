@@ -12,6 +12,8 @@ module.exports = {
     client: null,
     guild: null,
     nameCache: {},
+    rateLimits: {},
+    hasSentPickingMessage: {},
     translatedCodes: {
         'PLAYER_NOT_FOUND': 'You must authenticate your account first using /authenticate.',
         'QUEUE_FULL': 'The queue is full, please try again later.',
@@ -25,23 +27,25 @@ module.exports = {
         'TEAM_NOT_PICKING': 'It\'s not your turn to pick.',
         'GAME_NOT_FOUND': 'The game you\'re trying to retrieve the password for does not exist.',
         'PLAYER_NOT_IN_GAME': 'You are not in the game you\'re trying to retrieve the password for.',
+        'PLAYER_BANNED': 'You are banned from playing PUGs.',
     },
 
     getPlayerName: async function (player) {
-        if (this.nameCache[player.player.discord_id]) {
-            return this.nameCache[player.player.discord_id];
-        }
-
         let name = player.player.name;
+
+        if (this.nameCache[player.player.discord_id] && this.nameCache[player.player.discord_id].time > Date.now()) {
+            return this.nameCache[player.player.discord_id].name;
+        }
 
         try {
             let member = await this.guild.members.fetch(player.player.discord_id);
 
-            if (member.nickname) {
-                name = member.nickname;
+            if (member.displayName) {
+                name = member.displayName;
             }
         } finally {
-            this.nameCache[player.player.discord_id] = name;
+            this.nameCache[player.player.discord_id] = { name: name, time: Date.now() + 1000 * 60 * 24 };
+
             return name;
         }
     },
@@ -75,9 +79,33 @@ module.exports = {
                 break;
             case 'picking':
                 message = await this.generatePickingMessage(queue);
+
+                if (!this.hasSentPickingMessage[queue.id]) {
+                    let captains = queue.players.filter(player => player.is_captain);
+
+                    for (let captain of captains) {
+                        await this.client.users.fetch(captain.player.discord_id).then(async (user) => {
+                            await user.send({
+                                content: 'You\'re a captain in the ' + queue.name + ' queue, please select a player to join your team.',
+                            });
+                        });
+
+                        this.hasSentPickingMessage[queue.id] = true;
+                    }
+                }
+
                 break;
             case 'finished':
                 message = await this.generateFinishedMessage(queue);
+
+                for (let player of queue.players) {
+                    await this.client.users.fetch(player.player.discord_id).then(async (user) => {
+                        await user.send({
+                            content: 'The queue has finished, please join the game.\n\n**Lobby Name:** ' + queue.game.name + '\n**Password:** ' + queue.game.password,
+                        });
+                    });
+                }
+
                 break;
             default:
                 throw new Error('Unknown queue state: ' + queue.state);
@@ -92,7 +120,12 @@ module.exports = {
         }
 
         if (queue.state === 'finished') {
-            await this.reset(queue);
+            try {
+                await this.reset(queue);
+            } catch (error) {
+                channel.send('An error has occured while resetting the queue, please contact the admin team.');
+                console.error(error);
+            }
         }
     },
 
@@ -233,6 +266,10 @@ module.exports = {
     },
 
     processButton: async function (interaction, args) {
+        if (this.rateLimits[interaction.user.id] && this.rateLimits[interaction.user.id] > Date.now()) {
+            return await generateErrorEmbed(interaction, 'Stop spamming!');
+        }
+
         switch (args[0]) {
             case 'join':
                 await this.updatePlayer(args[1], true, interaction);
@@ -247,6 +284,8 @@ module.exports = {
                 await this.revealPassword(args[1], interaction);
                 break;
         }
+
+        this.rateLimits[interaction.user.id] = Date.now() + 1000;
     },
 
     revealPassword: async function (gameId, interaction) {
@@ -265,17 +304,13 @@ module.exports = {
     },
 
     reset: async function (queue) {
-        try {
-            const response = await api.post('/internal/queue/' + queue.id + '/reset');
+        const response = await api.post('/internal/queue/' + queue.id + '/reset');
 
-            this.queues[queue.id] = response.data;
-            this.lastUpdate[queue.id] = null;
-            this.messages[queue.id] = null;
+        this.queues[queue.id] = response.data;
+        this.lastUpdate[queue.id] = null;
+        this.messages[queue.id] = null;
 
-            await this.update(response.data);
-        } catch (response) {
-            console.error(response);
-        }
+        await this.update(response.data);
     },
 
     pickPlayer: async function (queueId, playerId, interaction) {
@@ -305,16 +340,16 @@ module.exports = {
                 discord_id: interaction.user.id,
             });
 
-            this.lastUpdate[queueId] = (interaction.member.nickname ?? interaction.user.username) + ' ' + (isJoin ? 'joined' : 'left') + ' the queue';
+            this.lastUpdate[queueId] = (interaction.member.displayName) + ' ' + (isJoin ? 'joined' : 'left') + ' the queue';
             this.queues[queueId] = response.data;
             await this.update(this.queues[queueId]);
-        } catch (response) {
-            if (!response.response || !response.response.data || !this.translatedCodes[response.response.data.code]) {
-                console.error(response);
+        } catch (error) {
+            if (!error.response || !error.response.data || !this.translatedCodes[error.response.data.code]) {
+                console.error(error);
                 return await generateErrorEmbed(interaction, 'An unknown error has occured, please contact the admin team.');
             }
 
-            return await generateErrorEmbed(interaction, this.translatedCodes[response.response.data.code]);
+            return await generateErrorEmbed(interaction, this.translatedCodes[error.response.data.code]);
         }
     },
 
