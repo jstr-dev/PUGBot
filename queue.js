@@ -28,6 +28,7 @@ module.exports = {
         'GAME_NOT_FOUND': 'The game you\'re trying to retrieve the password for does not exist.',
         'PLAYER_NOT_IN_GAME': 'You are not in the game you\'re trying to retrieve the password for.',
         'PLAYER_BANNED': 'You are banned from playing PUGs.',
+        'LOBBY_LIMIT': 'We were unable to create a new Slapshot lobby, please try again later.',
     },
 
     getPlayerName: async function (player) {
@@ -72,7 +73,6 @@ module.exports = {
 
     update: async function (queue) {
         let message = null;
-        console.log(queue);
 
         switch (queue.state) {
             case 'waiting':
@@ -177,31 +177,39 @@ module.exports = {
 
     generateTeamListMsgArr: async function (queue) {
         let maxPlayers = 8;
+        console.log(queue);
         let homeTeamPlayers = queue.players.filter(player => player.team === 'home').sort((a, b) => Date.parse(a.updated_at) - Date.parse(b.updated_at));
         let awayTeamPlayers = queue.players.filter(player => player.team === 'away').sort((a, b) => Date.parse(a.updated_at) - Date.parse(b.updated_at));
         let homeMsg = '';
         let awayMsg = '';
+        let homeTeamElo = 0;
+        let awayTeamElo = 0;
 
         for (let i = 0; i < maxPlayers / 2; i++) {
             homeMsg += '**' + (i + 1) + ':** ';
             awayMsg += '**' + (i + 1) + ':** ';
 
             if (homeTeamPlayers[i]) {
-                homeMsg += await this.getPlayerName(homeTeamPlayers[i]);
+                homeMsg += await this.getPlayerName(homeTeamPlayers[i]) + ' (' + homeTeamPlayers[i].elo + ' elo)';
+                homeTeamElo += homeTeamPlayers[i].elo;
             }
 
             if (awayTeamPlayers[i]) {
-                awayMsg += await this.getPlayerName(awayTeamPlayers[i]);
+                awayMsg += await this.getPlayerName(awayTeamPlayers[i]) + ' (' + awayTeamPlayers[i].elo + ' elo)';
+                awayTeamElo += awayTeamPlayers[i].elo;
             }
 
             homeMsg += '\n';
             awayMsg += '\n';
         }
 
+        homeTeamElo = Math.floor(homeTeamElo / homeTeamPlayers.length);
+        awayTeamElo = Math.floor(awayTeamElo / awayTeamPlayers.length);
+
         return [
-            { name: '🟥 Home Team', value: homeMsg, inline: true },
+            { name: '🟥 Home Team (' + homeTeamElo + ' avg elo)', value: homeMsg, inline: true },
             { name: '\u200B', value: '\u200B', inline: true },
-            { name: '🟦 Away Team', value: awayMsg, inline: true },
+            { name: '🟦 Away Team (' + awayTeamElo + ' avg elo)', value: awayMsg, inline: true },
         ];
     },
 
@@ -240,7 +248,7 @@ module.exports = {
 
             let button = new ButtonBuilder()
                 .setCustomId('queue-pick-' + queue.id + '-' + player.id)
-                .setLabel(await this.getPlayerName(player))
+                .setLabel(await this.getPlayerName(player) + ' (' + player.elo + ' elo)')
                 .setStyle(ButtonStyle.Primary);
 
             buttons.push(button);
@@ -325,6 +333,8 @@ module.exports = {
                 queue_player_id: playerId,
             });
 
+            console.log(response);
+
             this.queues[queueId] = response.data;
             await this.update(this.queues[queueId]);
         } catch (response) {
@@ -379,8 +389,6 @@ module.exports = {
         api.get('internal/queues').then(response => {
             for (queue of response.data) {
                 this.register(queue);
-                console.log('Registered queue ' + queue.id);
-                console.log(queue);
             }
 
             console.log('Queue information found, ready.');
