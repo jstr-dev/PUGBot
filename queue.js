@@ -31,20 +31,20 @@ module.exports = {
     },
 
     getPlayerName: async function (player) {
-        let name = player.player.name;
+        let name = player.name;
 
-        if (this.nameCache[player.player.discord_id] && this.nameCache[player.player.discord_id].time > Date.now()) {
-            return this.nameCache[player.player.discord_id].name;
+        if (this.nameCache[player.discord_id] && this.nameCache[player.discord_id].time > Date.now()) {
+            return this.nameCache[player.discord_id].name;
         }
 
         try {
-            let member = await this.guild.members.fetch(player.player.discord_id);
+            let member = await this.guild.members.fetch(player.discord_id);
 
             if (member.displayName) {
                 name = member.displayName;
             }
         } finally {
-            this.nameCache[player.player.discord_id] = { name: name, time: Date.now() + 1000 * 60 * 24 };
+            this.nameCache[player.discord_id] = { name: name, time: Date.now() + 1000 * 60 * 24 };
 
             return name;
         }
@@ -52,7 +52,7 @@ module.exports = {
 
     generatePlayerListMessage: async function (players) {
         for (let player of players) {
-            player.name = await this.getPlayerName(player);
+            player.name = await this.getPlayerName(player) + ' (' + player.elo + ' elo)';
         }
 
         if (players.length < 8) {
@@ -72,6 +72,7 @@ module.exports = {
 
     update: async function (queue) {
         let message = null;
+        console.log(queue);
 
         switch (queue.state) {
             case 'waiting':
@@ -84,11 +85,13 @@ module.exports = {
                     let captains = queue.players.filter(player => player.is_captain);
 
                     for (let captain of captains) {
-                        await this.client.users.fetch(captain.player.discord_id).then(async (user) => {
-                            await user.send({
-                                content: 'You\'re a captain in the ' + queue.name + ' queue, please select a player to join your team.',
+                        try {
+                            await this.client.users.fetch(captain.discord_id).then(async (user) => {
+                                await user.send({
+                                    content: 'You\'re a captain in the ' + queue.name + ' queue, please select a player to join your team.',
+                                });
                             });
-                        });
+                        } catch (error) { }
 
                         this.hasSentPickingMessage[queue.id] = true;
                     }
@@ -99,11 +102,13 @@ module.exports = {
                 message = await this.generateFinishedMessage(queue);
 
                 for (let player of queue.players) {
-                    await this.client.users.fetch(player.player.discord_id).then(async (user) => {
+                    try {
+                        await this.client.users.fetch(player.discord_id).then(async (user) => {
                         await user.send({
                             content: 'The queue has finished, please join the game.\n\n**Lobby Name:** ' + queue.game.name + '\n**Password:** ' + queue.game.password,
                         });
                     });
+                    } catch (error) { }
                 }
 
                 break;
@@ -161,7 +166,7 @@ module.exports = {
     },
 
     atMessage: function (player) {
-        return '<@' + player.player.discord_id + '>';
+        return '<@' + player.discord_id + '>';
     },
 
     getCurrentPickingPlayer: function (queue) {
@@ -374,6 +379,8 @@ module.exports = {
         api.get('internal/queues').then(response => {
             for (queue of response.data) {
                 this.register(queue);
+                console.log('Registered queue ' + queue.id);
+                console.log(queue);
             }
 
             console.log('Queue information found, ready.');
